@@ -1,0 +1,22 @@
+import {build} from 'vite';
+import {fileURLToPath} from 'node:url';
+import assert from 'node:assert/strict';
+const root=fileURLToPath(new URL('../../',import.meta.url));
+process.chdir(root);
+const count=Number(process.argv[2]??1000);
+if(![1000,5000].includes(count))throw new Error('Use 1000 or 5000 units.');
+await build({configFile:false,logLevel:'silent',build:{lib:{entry:'packages/simulation/engine.ts',formats:['es'],fileName:()=> 'engine.mjs'},target:'es2022',minify:false,outDir:'.sites-runtime/benchmark',emptyOutDir:true}});
+const {Simulation}=await import(new URL('../../.sites-runtime/benchmark/engine.mjs',import.meta.url));
+const s=new Simulation();
+s.command({type:'GENERATE_MAP',config:{seed:'RTS-001',size:'small',landform:'continents'},requestId:0});
+for(const c of s.map.cells)c.terrain='land';
+s.command({type:'PREPARE_MATCH',playerCount:4,botDifficulty:'off'});
+s.command({type:'START_MATCH',spawnId:0,name:'Profile'});
+s.match.diplomacy.testWar(1,2);
+for(let n=0;n<count;n++)s.army.spawn(1+n%2,'tank',count===1000?{x:250+(n%40)*135,y:250+Math.floor(n/40)*135}:{x:100+(n%100)*58,y:100+Math.floor(n/100)*76});
+for(let n=0;n<5;n++)s.step();
+const timings=[];
+for(let n=0;n<40;n++){const t=performance.now();s.step();timings.push(performance.now()-t);}
+assert.equal(s.army.count,count);
+timings.sort((a,b)=>a-b);
+console.log(JSON.stringify({runtime:'Node simulation only',units:count,warmup:5,samples:40,meanMs:timings.reduce((a,b)=>a+b,0)/40,p95Ms:timings[37],alive:s.army.count,profile:s.profile},null,2));

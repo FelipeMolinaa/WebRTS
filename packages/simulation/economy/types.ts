@@ -1,0 +1,5 @@
+import type {BuildingType,ResourceStock} from '../../shared/configs/buildings';
+export interface CityEconomy {population:number;capacity:number;excess:number;growthRate:number;foodConsumption:number;}
+export interface Building {id:number;ownerId:number;type:BuildingType;anchorId:number;rotation:number;cellIds:number[];buildersSpent:number;materialsSpent:Partial<ResourceStock>;construction?:{elapsed:number;duration:number;builders:number;ownerId:number};missile?:{type:'tactical'|'strategic';elapsed:number;duration:number};operatingRate?:number;city?:CityEconomy;bonus:number;initial:boolean;hp:number;maxHp:number;}
+export interface CountryEconomy {playerId:number;stock:ResourceStock;population:number;capacity:number;builders:number;busyBuilders?:number;maxBuilders:number;builderRecovery:number;freeBuildsUsed:{farm:boolean;mine:boolean};foodConsumption:number;foodProduction:number;foodSatisfaction:number;rates:ResourceStock;populationRate:number;}
+export interface PlacementResult {valid:boolean;reason:string;cellIds:number[];bonus:number;cost?:Partial<ResourceStock>;costMultiplier?:number;duration?:number;}

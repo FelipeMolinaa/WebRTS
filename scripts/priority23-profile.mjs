@@ -1,0 +1,14 @@
+// Node-only command latency, queue slice cost and bot perception; no browser FPS claim.
+// Run: node scripts/priority23-profile.mjs [baseline-checkout]
+import {build} from 'esbuild';
+import {mkdtempSync,rmSync} from 'node:fs';
+import {tmpdir} from 'node:os';
+import {resolve,join} from 'node:path';
+import {pathToFileURL} from 'node:url';
+const current=process.cwd(),directory=mkdtempSync(join(tmpdir(),'webrts-priority23-'));
+const versions=process.argv[2]?[['before',resolve(process.argv[2])],['after',current]]:[['after',current]];
+try{for(const [label,root]of versions){const out=join(directory,label+'.mjs');await build({stdin:{contents:`export {Simulation} from ${JSON.stringify(root+'/packages/simulation/engine.ts')};export {Perception} from ${JSON.stringify(root+'/packages/ai/perception.ts')};`,resolveDir:root,loader:'ts'},bundle:true,platform:'node',format:'esm',outfile:out});const {Simulation,Perception}=await import(pathToFileURL(out).href);
+const setup=size=>{const s=new Simulation(false,true);s.command({type:'GENERATE_MAP',config:{seed:'RTS-001',size,landform:'continents'},requestId:0});for(const c of s.map.cells)c.terrain='land';s.command({type:'PREPARE_MATCH',playerCount:2,botDifficulty:'off'});s.command({type:'START_MATCH',spawnId:0,name:'Profile'});return s;};
+for(const size of ['small','medium','large'])for(const count of [500,1000,2000,5000]){const s=setup(size),a=s.army,ids=[];for(let n=0;n<count;n++)ids.push(a.spawn(1,'tank',{x:1800+n%5,y:2000}));const start=performance.now();s.command({type:'MOVE_UNITS',playerId:1,unitIds:ids,target:{x:3000,y:2000}},'human',true);const commandMs=performance.now()-start,slices=[];if(a.routes)for(let n=0;n<10000&&a.routes.pending;n++){const t=performance.now();a.routes.step();slices.push(performance.now()-t);}if(a.routeErrors?.length||a.routes?.pending||a.groups.size!==1)throw new Error('Route planning did not complete.');slices.sort((a,b)=>a-b);console.log(JSON.stringify({label,size,units:count,scenario:'move-command',commandMs:+commandMs.toFixed(3),queueCycles:slices.length,queueMedianMs:+(slices[Math.floor(slices.length/2)]??0).toFixed(3),queueP95Ms:+(slices[Math.floor(slices.length*.95)]??0).toFixed(3),queueMaxMs:+(slices.at(-1)??0).toFixed(3),groups:a.groups.size}));}
+for(const count of [500,1000,2000,5000]){const s=setup('large'),a=s.army;for(let n=0;n<count;n++)a.spawn(2,'tank',{x:3000,y:2000});const p=new Perception(2,s.match,a),times=[];for(let n=0;n<10;n++){const t=performance.now();p.update(n*2);if(n>1)times.push(performance.now()-t);}times.sort((a,b)=>a-b);console.log(JSON.stringify({label,size:'large',units:count,scenario:'clustered-vision',medianMs:+times[4].toFixed(3),p95Ms:+times[7].toFixed(3),visible:p.visible.size,groups:p.visionGroups??count}));}
+}}finally{rmSync(directory,{recursive:true,force:true});}

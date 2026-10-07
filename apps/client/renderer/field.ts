@@ -1,0 +1,24 @@
+import {UnitRenderer} from './units';
+import { Application,Container,Graphics,Particle,ParticleContainer,Texture } from 'pixi.js';
+import { ENGINE,TEAM_COLORS } from '../../../packages/shared/configs/engine';
+import { Camera } from '../input/camera';
+import {TerrainRenderer} from './terrain';
+import {OwnershipRenderer} from './ownership';
+import {PlacementRenderer} from './buildings';
+import type {ProceduralMap} from '../../../packages/map/types';
+export class FieldRenderer {
+ readonly military=new UnitRenderer();readonly placement=new PlacementRenderer();readonly ownership=new OwnershipRenderer();readonly terrain=new TerrainRenderer();private fallback=new Container();showEntities=false;
+ readonly app=new Application();readonly world=new Container();camera!:Camera;private particles!:ParticleContainer;private dots!:Texture;private arrows!:Texture;private units:Particle[]=[];visible=0;renderMs=0;private startRender=0;
+ async init(host:HTMLElement){await this.app.init({resizeTo:host,background:0x182320,antialias:false,preference:'webgl',resolution:Math.min(devicePixelRatio,2),autoDensity:true,powerPreference:'high-performance'});await this.ownership.init();host.appendChild(this.app.canvas);this.app.canvas.setAttribute('aria-label','Mapa procedural: arraste para navegar e clique para inspecionar');this.camera=new Camera(this.app.canvas);this.camera.resize(host.clientWidth,host.clientHeight);this.camera.fit();this.app.stage.addChild(this.world);this.world.addChild(this.fallback);
+ const ground=new Graphics().rect(0,0,ENGINE.worldWidth,ENGINE.worldHeight).fill(0x334b3c).stroke({color:0x6a8270,width:3,alpha:.65});this.fallback.addChild(ground);const grid=new Graphics();for(let x=0;x<=ENGINE.worldWidth;x+=250)grid.moveTo(x,0).lineTo(x,ENGINE.worldHeight);for(let y=0;y<=ENGINE.worldHeight;y+=250)grid.moveTo(0,y).lineTo(ENGINE.worldWidth,y);grid.stroke({color:0x78917c,alpha:.09,width:1});this.fallback.addChild(grid);
+ const origin=new Graphics().moveTo(ENGINE.worldWidth/2-35,ENGINE.worldHeight/2).lineTo(ENGINE.worldWidth/2+35,ENGINE.worldHeight/2).moveTo(ENGINE.worldWidth/2,ENGINE.worldHeight/2-35).lineTo(ENGINE.worldWidth/2,ENGINE.worldHeight/2+35).stroke({color:0xc3d5c7,alpha:.3,width:2});this.fallback.addChild(origin);
+ const arrow=new Graphics().poly([-5,-4,6,0,-5,4,-2,0]).fill(0xffffff);this.arrows=this.app.renderer.generateTexture(arrow);arrow.destroy();const dot=new Graphics().rect(0,0,4,4).fill(0xffffff);this.dots=this.app.renderer.generateTexture(dot);dot.destroy();this.particles=new ParticleContainer({dynamicProperties:{position:true,rotation:true,color:true,vertex:true,uvs:true}});this.world.addChild(this.particles);
+ this.military.init(this.app);this.world.addChild(this.military.root);
+ this.app.renderer.runners.prerender.add({prerender:()=>{this.startRender=performance.now();}});this.app.renderer.runners.postrender.add({postrender:()=>{const ms=performance.now()-this.startRender;this.renderMs=this.renderMs*.9+ms*.1;}});new ResizeObserver(()=>{this.camera.resize(host.clientWidth,host.clientHeight);}).observe(host);}
+ setMap(map:ProceduralMap){this.fallback.visible=false;this.terrain.setMap(map);this.ownership.setMap(map);this.placement.draw(null,null);if(!this.terrain.root.parent)this.world.addChildAt(this.terrain.root,1);if(!this.ownership.root.parent)this.world.addChild(this.ownership.root);if(!this.placement.root.parent)this.world.addChild(this.placement.root);this.world.addChild(this.military.root);}
+ draw(current:Float32Array,previous:Float32Array|null,count:number,alpha:number){const camera=this.camera;this.world.scale.set(camera.zoom);this.world.position.set(camera.width/2-camera.x*camera.zoom,camera.height/2-camera.y*camera.zoom);this.terrain.update(camera);this.ownership.update(camera);this.military.draw(camera);this.particles.visible=this.showEntities;this.visible=0;if(!this.showEntities)return;if(this.units.length>count){for(let i=count;i<this.units.length;i++)this.particles.removeParticle(this.units[i]);this.units.length=count;}
+ const bounds=camera.bounds(),small=camera.zoom<.3;this.visible=0;this.particles.texture=small?this.dots:this.arrows;
+ for(let i=0;i<count;i++){const k=i*5;let p=this.units[i];if(!p){p=new Particle({texture:small?this.dots:this.arrows,anchorX:.5,anchorY:.5});this.units.push(p);this.particles.addParticle(p);}const canInterpolate=previous&&k+4<previous.length;const x=canInterpolate?previous[k]+(current[k]-previous[k])*alpha:current[k],y=canInterpolate?previous[k+1]+(current[k+1]-previous[k+1])*alpha:current[k+1];p.x=x;p.y=y;p.rotation=current[k+2];p.tint=current[k+4]?0xeeeecc:TEAM_COLORS[current[k+3]];p.texture=small?this.dots:this.arrows;
+ const visible=x>=bounds.left-20&&x<=bounds.right+20&&y>=bounds.top-20&&y<=bounds.bottom+20;p.scaleX=visible?(small?Math.max(1,.65/camera.zoom):1):0;p.scaleY=p.scaleX;if(visible)this.visible++;}
+ }
+}

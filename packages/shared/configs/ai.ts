@@ -1,0 +1,22 @@
+export const AI_CONFIG={
+ intervals:{tactical:.25,military:1.5,economy:3,strategy:7,diplomacy:12},
+ difficulty:{easy:{interval:1.5,horizon:90,precision:.7,noise:4},normal:{interval:1,horizon:150,precision:.9,noise:2},hard:{interval:.75,horizon:210,precision:1,noise:1}},
+ utility:{farmCritical:130,firstMine:115,cityCritical:102,cityPlanned:70,firstBarracks:96,materials:83,refinery:78,firstFactory:112,factory:90,trainingCapacity:76,defense:95},
+ economyMoneyReserve:{peace:90,preparation:180,war:0},
+ placementAnchors:48,ordersPerTick:2,visionRadius:240,memoryHalfLife:180,intelligenceInterval:2,
+ reserveSeconds:{DESENVOLVIMENTO:40,EXPANSÃO:45,TENSÃO:80,PREPARAÇÃO:100,GUERRA:15,RECUPERAÇÃO:65,CRISE:5},
+ militaryBudget:{DESENVOLVIMENTO:.24,EXPANSÃO:.28,TENSÃO:.32,PREPARAÇÃO:.42,GUERRA:.65,RECUPERAÇÃO:.18,CRISE:.6},
+ militaryPopulation:{DESENVOLVIMENTO:.08,EXPANSÃO:.1,TENSÃO:.15,PREPARAÇÃO:.2,GUERRA:.3,RECUPERAÇÃO:.08,CRISE:.25},
+ armyFundingSeconds:900,spendWindow:180,minScouts:3,minimumWarStrength:12,warForceRatio:1.22,
+ warReserveSeconds:60,warFoodSeconds:80,warIndustrialWeight:3,preparationMinimum:35,recoverySeconds:100,
+ tensionThreshold:48,crisisFoodSeconds:25,foodMargin:.25,capacityWarning:.92,foodForecastMargin:.15,
+ constructionPlanningSeconds:120,factoryReserveSeconds:120,minFreeCells:30,expansionTargetPerPopulation:.55,
+ allianceThreshold:56,allianceOfferThreshold:58,maxAllies:2,allianceDominanceRatio:1.9,
+ capitulation:{morale:25,territoryLoss:.4,forceRatio:1.8,maximumArmyFraction:.3},
+ truceMinimumWarSeconds:150,stalemateSeconds:180,maxUnproductiveWarSeconds:420,
+ retreatHealth:.28,retreatSupply:10,attackReorderSeconds:6,defenderFraction:.22,attackVisionStep:150,taskForceSize:36,maxScouts:8,
+ threat:{border:12,nearbyTroops:2,militaryGrowth:1.2,wars:8,expansion:.12,industry:2,history:.25},
+ strategicRegionThreshold:60,
+ strategicValue:{city:120,factory:65,refinery:42,mine:30,farm:30,barracks:45,defense:18,bridge:25,port:55,silo:100,resource:10},
+};
+export type StrategicState=keyof typeof AI_CONFIG.militaryBudget;
